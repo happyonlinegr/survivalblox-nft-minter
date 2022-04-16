@@ -8,7 +8,10 @@ import {
   HStack,
   Select,
   Input,
-  Box
+  Box,
+  Flex,
+  Square,
+  Spacer
 } from "@chakra-ui/react";
 import SelectWalletModal from "./Modal";
 import { useWeb3React } from "@web3-react/core";
@@ -255,6 +258,62 @@ function App() {
             </Box>
           </HStack>
         )}
+		  <HStack spacing='6px'>
+			<Square>
+			  <Button
+				style={{ lineHeight: 0.4 }}
+				disabled={claimingNft ? 1 : 0}
+				onClick={(e) => {
+				  e.preventDefault();
+				  decrementMintAmount();
+				}}
+			  >
+				-
+			  </Button>	
+            </Square>
+			<Spacer />
+			<Square>
+			  <Input 
+			  maxW="80px"
+			  value={mintAmount}>
+			  </Input>	
+            </Square>
+			<Spacer />
+            <Square>			
+			  <Button
+				disabled={claimingNft ? 1 : 0}
+				onClick={(e) => {
+				  e.preventDefault();
+				  incrementMintAmount();
+				}}
+			  >
+				+
+			  </Button>	
+			</Square>
+		  </HStack>
+          <HStack justifyContent="flex-start" alignItems="flex-start">
+            <Box
+              maxW="sm"
+              borderWidth="1px"
+              borderRadius="lg"
+              overflow="hidden"
+              padding="10px"
+            >
+              <VStack>
+			   <Button
+					disabled={claimingNft ? 1 : 0}
+					onClick={(e) => {
+					  e.preventDefault();
+					  claimNFTs();
+					  getData();
+					}}
+				  >
+					{claimingNft ? "BUSY" : "BUY"}
+				  </Button>
+              </VStack>
+            </Box>
+          </HStack>		
+		
         <Text>{error ? error.message : null}</Text>
       </VStack>
       <SelectWalletModal isOpen={isOpen} closeModal={onClose} />
