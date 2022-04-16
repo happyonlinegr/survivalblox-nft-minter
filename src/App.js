@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from "react-redux";
 import {
   VStack,
   useDisclosure,
@@ -16,8 +17,20 @@ import { Tooltip } from "@chakra-ui/react";
 import { networkParams } from "./networks";
 import { connectors } from "./connectors";
 import { toHex, truncateAddress } from "./utils";
+import { fetchData } from "./redux/data/dataActions";
 
-export default function Home() {
+function App() {
+  const dispatch = useDispatch();
+  const data = useSelector((state) => state.data);  
+  const [claimingNft, setClaimingNft] = useState(false);
+  const [feedback, setFeedback] = useState(`Click buy to mint your NFT.`);
+  const [mintAmount, setMintAmount] = useState(1);	
+  const [signature, setSignature] = useState("");
+  const [error, setError] = useState("");
+  const [network, setNetwork] = useState(undefined);
+  const [message, setMessage] = useState("");
+  const [signedMessage, setSignedMessage] = useState("");
+  const [verified, setVerified] = useState();  
   const [CONFIG, SET_CONFIG] = useState({
     CONTRACT_ADDRESS: "",
     SCAN_LINK: "",
@@ -45,12 +58,6 @@ export default function Home() {
     deactivate,
     active
   } = useWeb3React();
-  const [signature, setSignature] = useState("");
-  const [error, setError] = useState("");
-  const [network, setNetwork] = useState(undefined);
-  const [message, setMessage] = useState("");
-  const [signedMessage, setSignedMessage] = useState("");
-  const [verified, setVerified] = useState();
 
   const handleNetwork = (e) => {
     const id = e.target.value;
@@ -92,6 +99,61 @@ export default function Home() {
     refreshState();
     deactivate();
   };
+ const blockchain = useSelector((state) => state.blockchain);   
+ const claimNFTs = () => {
+    let cost = CONFIG.WEI_COST;
+    let gasLimit = CONFIG.GAS_LIMIT;
+    let totalCostWei = String(cost * mintAmount);
+    let totalGasLimit = String(gasLimit * mintAmount);
+    console.log("Cost: ", totalCostWei);
+    console.log("Gas limit: ", totalGasLimit);
+    setFeedback(`Minting your ${CONFIG.NFT_NAME}...`);
+    setClaimingNft(true);
+    blockchain.smartContract.methods
+      .mintQueenChiku(mintAmount)
+      .send({
+        gasLimit: String(totalGasLimit),
+        to: CONFIG.CONTRACT_ADDRESS,
+        from: {account},
+        value: totalCostWei,
+      })
+      .once("error", (err) => {
+        console.log(err);
+        setFeedback("Sorry, something went wrong please try again later.");
+        setClaimingNft(false);
+      })
+      .then((receipt) => {
+        console.log(receipt);
+        setFeedback(
+          `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
+        );
+        setClaimingNft(false);
+        dispatch(fetchData({account}));
+      });
+  };
+
+  const decrementMintAmount = () => {
+    let newMintAmount = mintAmount - 1;
+    if (newMintAmount < 1) {
+      newMintAmount = 1;
+    }
+    setMintAmount(newMintAmount);
+  };
+
+  const incrementMintAmount = () => {
+    let newMintAmount = mintAmount + 1;
+    if (newMintAmount > 10) {
+      newMintAmount = 10;
+    }
+    setMintAmount(newMintAmount);
+  };
+
+  const getData = () => {
+    if (account !== "" && blockchain.smartContract !== null) {
+      dispatch(fetchData(blockchain.account));
+    }
+  };
+  
   
   const getConfig = async () => {
     const configResponse = await fetch("/config/config.json", {
@@ -199,3 +261,5 @@ export default function Home() {
     </>
   );
 }
+
+export default App;
