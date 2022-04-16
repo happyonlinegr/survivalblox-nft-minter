@@ -56,60 +56,6 @@ export default function Home() {
     const id = e.target.value;
     setNetwork(Number(id));
   };
-  const claimNFTs = () => {
-    let cost = CONFIG.WEI_COST;
-    let gasLimit = CONFIG.GAS_LIMIT;
-    let totalCostWei = String(cost * mintAmount);
-    let totalGasLimit = String(gasLimit * mintAmount);
-    console.log("Cost: ", totalCostWei);
-    console.log("Gas limit: ", totalGasLimit);
-    setFeedback(`Minting your ${CONFIG.NFT_NAME}...`);
-    setClaimingNft(true);
-    blockchain.smartContract.methods
-      .mintQueenChiku(mintAmount)
-      .send({
-        gasLimit: String(totalGasLimit),
-        to: CONFIG.CONTRACT_ADDRESS,
-        from: blockchain.account,
-        value: totalCostWei,
-      })
-      .once("error", (err) => {
-        console.log(err);
-        setFeedback("Sorry, something went wrong please try again later.");
-        setClaimingNft(false);
-      })
-      .then((receipt) => {
-        console.log(receipt);
-        setFeedback(
-          `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
-        );
-        setClaimingNft(false);
-        dispatch(fetchData(blockchain.account));
-      });
-  };
-
-  const decrementMintAmount = () => {
-    let newMintAmount = mintAmount - 1;
-    if (newMintAmount < 1) {
-      newMintAmount = 1;
-    }
-    setMintAmount(newMintAmount);
-  };
-
-  const incrementMintAmount = () => {
-    let newMintAmount = mintAmount + 1;
-    if (newMintAmount > 10) {
-      newMintAmount = 10;
-    }
-    setMintAmount(newMintAmount);
-  };
-
-  const getData = () => {
-    if (blockchain.account !== "" && blockchain.smartContract !== null) {
-      dispatch(fetchData(blockchain.account));
-    }
-  };
-
   const handleInput = (e) => {
     const msg = e.target.value;
     setMessage(msg);
@@ -246,52 +192,6 @@ export default function Home() {
             >
             </Box>
           </HStack>
-		  
-			<s.Container ai={"center"} jc={"center"} fd={"row"}>
-			  <StyledRoundButton
-				style={{ lineHeight: 0.4 }}
-				disabled={claimingNft ? 1 : 0}
-				onClick={(e) => {
-				  e.preventDefault();
-				  decrementMintAmount();
-				}}
-			  >
-				-
-			  </StyledRoundButton>
-			  <s.SpacerMedium />
-			  <s.TextDescription
-				style={{
-				  textAlign: "center",
-				  color: "var(--accent-text)",
-				}}
-			  >
-				{mintAmount}
-			  </s.TextDescription>
-			  <s.SpacerMedium />
-			  <StyledRoundButton
-				disabled={claimingNft ? 1 : 0}
-				onClick={(e) => {
-				  e.preventDefault();
-				  incrementMintAmount();
-				}}
-			  >
-				+
-			  </StyledRoundButton>
-			</s.Container>
-			<s.SpacerSmall />
-			<s.Container ai={"center"} jc={"center"} fd={"row"}>
-			  <StyledButton
-				disabled={claimingNft ? 1 : 0}
-				onClick={(e) => {
-				  e.preventDefault();
-				  claimNFTs();
-				  getData();
-				}}
-			  >
-				{claimingNft ? "BUSY" : "BUY"}
-			  </StyledButton>
-			</s.Container>		  
-		  
         )}
         <Text>{error ? error.message : null}</Text>
       </VStack>
