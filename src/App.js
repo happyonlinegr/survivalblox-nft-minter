@@ -81,34 +81,6 @@ export default function Home() {
       }
     }
   };
-
-  const signMessage = async () => {
-    if (!library) return;
-    try {
-      const signature = await library.provider.request({
-        method: "personal_sign",
-        params: [message, account]
-      });
-      setSignedMessage(message);
-      setSignature(signature);
-    } catch (error) {
-      setError(error);
-    }
-  };
-
-  const verifyMessage = async () => {
-    if (!library) return;
-    try {
-      const verify = await library.provider.request({
-        method: "personal_ecRecover",
-        params: [signedMessage, signature]
-      });
-      setVerified(verify === account.toLowerCase());
-    } catch (error) {
-      setError(error);
-    }
-  };
-
   const refreshState = () => {
     window.localStorage.setItem("provider", undefined);
     setNetwork("");
@@ -144,9 +116,6 @@ export default function Home() {
 
   return (
     <>
-      <Text position="absolute" top={0} right="15px">
-        If you're in the sandbox, first "Open in New Window" ⬆️
-      </Text>
       <VStack justifyContent="center" alignItems="center" h="100vh">
         <HStack marginBottom="10px">
           <Text
@@ -155,7 +124,7 @@ export default function Home() {
             fontSize={["1.5em", "2em", "3em", "4em"]}
             fontWeight="600"
           >
-            Let's connect with
+            SurvivalBlox
           </Text>
           <Text
             margin="0"
@@ -168,7 +137,7 @@ export default function Home() {
               WebkitTextFillColor: "transparent"
             }}
           >
-            Web3-React
+            NFT
           </Text>
         </HStack>
         <HStack>
@@ -222,48 +191,6 @@ export default function Home() {
               overflow="hidden"
               padding="10px"
             >
-              <VStack>
-                <Button onClick={signMessage} isDisabled={!message}>
-                  Sign Message
-                </Button>
-                <Input
-                  placeholder="Set Message"
-                  maxLength={20}
-                  onChange={handleInput}
-                  w="140px"
-                />
-                {signature ? (
-                  <Tooltip label={signature} placement="bottom">
-                    <Text>{`Signature: ${truncateAddress(signature)}`}</Text>
-                  </Tooltip>
-                ) : null}
-              </VStack>
-            </Box>
-            <Box
-              maxW="sm"
-              borderWidth="1px"
-              borderRadius="lg"
-              overflow="hidden"
-              padding="10px"
-            >
-              <VStack>
-                <Button onClick={verifyMessage} isDisabled={!signature}>
-                  Verify Message
-                </Button>
-                {verified !== undefined ? (
-                  verified === true ? (
-                    <VStack>
-                      <CheckCircleIcon color="green" />
-                      <Text>Signature Verified!</Text>
-                    </VStack>
-                  ) : (
-                    <VStack>
-                      <WarningIcon color="red" />
-                      <Text>Signature Denied!</Text>
-                    </VStack>
-                  )
-                ) : null}
-              </VStack>
             </Box>
           </HStack>
         )}
