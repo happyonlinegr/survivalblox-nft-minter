@@ -1,0 +1,18 @@
+{
+  "CONTRACT_ADDRESS": "0xc32129c0bad4c7c98d2786bfc984508083368ce4",
+  "SCAN_LINK": "https://bscscan.com/address/0xc32129c0bad4c7c98d2786bfc984508083368ce4",
+  "NETWORK": {
+    "NAME": "Binance Smart Chain",
+    "SYMBOL": "BSC",
+    "ID": 56
+  },
+  "NFT_NAME": "QueenChiku",
+  "SYMBOL": "Queen",
+  "MAX_SUPPLY": 3500,
+  "WEI_COST": 50000000000000000,
+  "DISPLAY_COST": 0.05,
+  "GAS_LIMIT": 285000,
+  "MARKETPLACE": "TofuNFT",
+  "MARKETPLACE_LINK": "https://tofunft.com/discover/items?contracts=9549",
+  "SHOW_BACKGROUND": true
+}
