@@ -18,6 +18,24 @@ import { connectors } from "./connectors";
 import { toHex, truncateAddress } from "./utils";
 
 export default function Home() {
+  const [CONFIG, SET_CONFIG] = useState({
+    CONTRACT_ADDRESS: "",
+    SCAN_LINK: "",
+    NETWORK: {
+      NAME: "",
+      SYMBOL: "",
+      ID: 0,
+    },
+    NFT_NAME: "",
+    SYMBOL: "",
+    MAX_SUPPLY: 1,
+    WEI_COST: 0,
+    DISPLAY_COST: 0,
+    GAS_LIMIT: 0,
+    MARKETPLACE: "",
+    MARKETPLACE_LINK: "",
+    SHOW_BACKGROUND: false,
+  });	
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
     library,
