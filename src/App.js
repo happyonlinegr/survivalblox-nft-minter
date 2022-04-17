@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from "react-redux";
+//import { useDispatch, useSelector } from "react-redux";
 import {
   VStack,
   useDisclosure,
@@ -20,25 +20,26 @@ import { Tooltip } from "@chakra-ui/react";
 import { networkParams } from "./networks";
 import { connectors } from "./connectors";
 import { toHex, truncateAddress } from "./utils";
-import { connect } from "./redux/blockchain/blockchainActions";
-import { fetchData } from "./redux/data/dataActions";
+//import { connect } from "./redux/blockchain/blockchainActions";
+//import { fetchData } from "./redux/data/dataActions";
 import Web3EthContract from "web3-eth-contract";
 import Web3 from "web3";
 
 function App() {
-  const dispatch = useDispatch();
-  const data = useSelector((state) => state.data);  
+  //const dispatch = useDispatch();
+  //const data = useSelector((state) => state.data);  
   const [claimingNft, setClaimingNft] = useState(false);
-  const [feedback, setFeedback] = useState(`Click buy to mint your NFT.`);
+  const [feedback, setFeedback] = useState(`Click claim to mint your NFT.`);
   const [mintAmount, setMintAmount] = useState(1);	
-  const [signature, setSignature] = useState("");
-  const [error, setError] = useState("");
+  //const [signature, setSignature] = useState("");
+  //const [error, setError] = useState("");
   const [smartContract, setSmartContract] = useState("");
+  const [totalSupply, setTotalSupply] = useState("");
   
   const [network, setNetwork] = useState(undefined);
   const [message, setMessage] = useState("");
-  const [signedMessage, setSignedMessage] = useState("");
-  const [verified, setVerified] = useState();  
+  //const [signedMessage, setSignedMessage] = useState("");
+  //const [verified, setVerified] = useState();  
   
   const [CONFIG, SET_CONFIG] = useState({
     CONTRACT_ADDRESS: "",
@@ -78,7 +79,8 @@ function App() {
     setMessage(msg);
   };
 
-  const switchNetwork = async () => {
+
+  /*const switchNetwork = async () => {
     try {
       await library.provider.request({
         method: "wallet_switchEthereumChain",
@@ -92,25 +94,25 @@ function App() {
             params: [networkParams[toHex(network)]]
           });
         } catch (error) {
-          setError(error);
+          setFeedback(error);
         }
       }
     }
-  };
+  };*/
   
   const refreshState = () => {
     window.localStorage.setItem("provider", undefined);
     setNetwork("");
-    setMessage("");
-    setSignature("");
-    setVerified(undefined);
+    //setMessage("");
+    //setSignature("");
+    //setVerified(undefined);
   };
 
   const disconnect = () => {
     refreshState();
     deactivate();
   };
- const blockchain = useSelector((state) => state.blockchain);   
+ //const blockchain = useSelector((state) => state.blockchain);   
  const claimNFTs = () => {
     let cost = CONFIG.WEI_COST;
     let gasLimit = CONFIG.GAS_LIMIT;
@@ -119,29 +121,33 @@ function App() {
     console.log("Cost: ", totalCostWei);
     console.log("Gas limit: ", totalGasLimit);
     setFeedback(`Minting your ${CONFIG.NFT_NAME}...`);
-    setClaimingNft(true);
-
-    smartContract.methods
-      .mintQueenChiku(1)
-      .send({
-        gasLimit: String(totalGasLimit),
-        to: CONFIG.CONTRACT_ADDRESS,
-        from: account,
-        value: totalCostWei,
-      })
-      .once("error", (err) => {
-        console.log(err);
-        setFeedback("Sorry, something went wrong please try again later.");
-        setClaimingNft(false);
-      })
-      .then((receipt) => {
-        console.log(receipt);
-        setFeedback(
-          `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
-        );
-        setClaimingNft(false);
-        //dispatch(fetchData({account}));
-      });
+	setClaimingNft(true);
+	if (chainId == CONFIG.NETWORK.ID) {
+		smartContract.methods
+		  .mintQueenChiku(1)
+		  .send({
+			gasLimit: String(totalGasLimit),
+			to: CONFIG.CONTRACT_ADDRESS,
+			from: account,
+			value: totalCostWei,
+		  })
+		  .once("error", (err) => {
+			console.log(err);
+			setFeedback("Sorry, something went wrong please try again later.");
+			setClaimingNft(false);
+		  })
+		  .then((receipt) => {
+			console.log(receipt);
+			setFeedback(
+			  `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
+			);
+			setClaimingNft(false);
+			//dispatch(fetchData({account}));
+		  });
+	} else {
+		setClaimingNft(false);
+		setFeedback("Please switch your Network to ${CONFIG.NETWORK.NAME} ");
+	};
   };
 
   const decrementMintAmount = () => {
@@ -160,11 +166,12 @@ function App() {
     setMintAmount(newMintAmount);
   };
 
-  const getData = () => {
-    if (account !== "" && blockchain.smartContract !== null) {
+  /*const getData = () => {
+    if (account !== "" && smartContract !== null) {
       dispatch(fetchData(blockchain.account));
+	  console.log(smartContract);
     }
-  };
+  };*/
   
   
   const getConfig = async () => {
@@ -197,7 +204,7 @@ function App() {
     const CONFIG = await configResponse.json();	  
 	  
 	const { ethereum } = window;
-	console.log(ethereum);
+
     Web3EthContract.setProvider(ethereum);
     let web3 = new Web3(ethereum);
     try {
@@ -206,11 +213,14 @@ function App() {
 		CONFIG.CONTRACT_ADDRESS
 	  );
 	  
-	  setSmartContract(SmartContract);
-		 
+		setSmartContract(SmartContract);
+		
+		const totalSupply = await SmartContract.methods.totalSupply().call();
+		
+		setTotalSupply(totalSupply);
+		
 	  } catch (err) {
 		console.log("Something went wrong.");
-          //dispatch(connectFailed("Something went wrong."));
       }
 	 
   };    
@@ -272,100 +282,87 @@ function App() {
             <Text>{`Account: ${truncateAddress(account)}`}</Text>
           </Tooltip>
           <Text>{`Network ID: ${chainId ? chainId : "No Network"}`}</Text>
-        </VStack>
-        {active && (
-          <HStack justifyContent="flex-start" alignItems="flex-start">
-            <Box
-              maxW="sm"
-              borderWidth="1px"
-              borderRadius="lg"
-              overflow="hidden"
-              padding="10px"
-            >
-              <VStack>
-                <Button onClick={switchNetwork} isDisabled={!network}>
-                  Switch Network
-                </Button>
-                <Select placeholder="Select network" onChange={handleNetwork}>
-                  <option value="3">Ropsten</option>
-                  <option value="56">Binance Smart Chain</option>
-                  <option value="4">Rinkeby</option>
-                  <option value="42">Kovan</option>
-                  <option value="1666600000">Harmony</option>
-                  <option value="42220">Celo</option>
-                </Select>
-              </VStack>
-            </Box>
-          </HStack>
-        )}
-		  <HStack spacing='6px'>
-			<Square>
-			  <Button
-				style={{ lineHeight: 0.4 }}
-				disabled={claimingNft ? 1 : 0}
-				onClick={(e) => {
-				  e.preventDefault();
-				  decrementMintAmount();
-				}}
-			  >
-				-
-			  </Button>	
-            </Square>
-			<Spacer />
-			<Square>
-			  <Input 
-			  maxW="80px"
-			  value={mintAmount}>
-			  </Input>	
-            </Square>
-			<Spacer />
-            <Square>			
-			  <Button
-				disabled={claimingNft ? 1 : 0}
-				onClick={(e) => {
-				  e.preventDefault();
-				  incrementMintAmount();
-				}}
-			  >
-				+
-			  </Button>	
-			</Square>
-		  </HStack>
-          <HStack justifyContent="flex-start" alignItems="flex-start">
-            <Box
-              maxW="sm"
-              borderWidth="1px"
-              borderRadius="lg"
-              overflow="hidden"
-              padding="10px"
-            >
-              <VStack>
-			   <Button
-					disabled={claimingNft || chainId != 56 ? 1 : 0}
+          </VStack>
+		
+		 {Number(totalSupply) >= CONFIG.MAX_SUPPLY ? (
+		 <VStack></VStack>
+		 ) : (
+		  <VStack>
+			  <Text>
+			  {totalSupply} / {CONFIG.MAX_SUPPLY}
+			  </Text>
+			  <HStack spacing='6px'>
+				<Square>
+				  <Button
+					style={{ lineHeight: 0.4 }}
+					disabled={claimingNft ? 1 : 0}
 					onClick={(e) => {
 					  e.preventDefault();
-					  claimNFTs();
-					  getData();
+					  decrementMintAmount();
 					}}
-				  > 
-				   {chainId == 56 ? (
-					  <Box>
-					  {claimingNft ? "BUSY" : "BUY"}
-					  </Box>
-					) : (
-					  "Wrong Network"
-					)}
-				  </Button>
-              </VStack>
-            </Box>
-          </HStack>	
-		  <HStack justifyContent="flex-start" alignItems="flex-start">
-            <Text>
-			  {feedback}
-			</Text>
-		   </HStack>	
+				  >
+					-
+				  </Button>	
+				</Square>
+				<Spacer />
+				<Square>
+				  <Input 
+				  maxW="80px"
+				  value={mintAmount}>
+				  </Input>	
+				</Square>
+				<Spacer />
+				<Square>			
+				  <Button
+					disabled={claimingNft ? 1 : 0}
+					onClick={(e) => {
+					  e.preventDefault();
+					  incrementMintAmount();
+					}}
+				  >
+					+
+				  </Button>	
+				</Square>
+			  </HStack>
+			  <HStack justifyContent="flex-start" alignItems="flex-start">
+				<Box
+				  maxW="sm"
+				  borderWidth="1px"
+				  borderRadius="lg"
+				  overflow="hidden"
+				  padding="10px"
+				>
+				  <VStack>
+				   <Button
+						disabled={claimingNft || chainId != 56 ? 1 : 0}
+						onClick={(e) => {
+						  e.preventDefault();
+						  claimNFTs();
+						  //getData();
+						}}
+					  > 
+					   {chainId == 56 ? (
+						  <Box>
+						  {claimingNft ? "Loading" : "Claim ${mintAmount} NFT"}
+						  </Box>
+						) : (
+						  <Box>
+						  {chainId ? "Wrong Network" : "Connect to Claim"}
+						  </Box>
+						)}
+					  </Button>
+				  </VStack>
+				</Box>
+			  </HStack>	
+			  <HStack justifyContent="flex-start" alignItems="flex-start">
+				<Text>
+				  {feedback}
+				</Text>
+			   </HStack>	
+		   </VStack>	
+		 )}
 		
-        <Text>{error ? error.message : null}</Text>
+        
       </VStack>
       <SelectWalletModal isOpen={isOpen} closeModal={onClose} />
     </>
