@@ -20,7 +20,10 @@ import { Tooltip } from "@chakra-ui/react";
 import { networkParams } from "./networks";
 import { connectors } from "./connectors";
 import { toHex, truncateAddress } from "./utils";
+import { connect } from "./redux/blockchain/blockchainActions";
 import { fetchData } from "./redux/data/dataActions";
+import Web3EthContract from "web3-eth-contract";
+import Web3 from "web3";
 
 function App() {
   const dispatch = useDispatch();
@@ -30,10 +33,13 @@ function App() {
   const [mintAmount, setMintAmount] = useState(1);	
   const [signature, setSignature] = useState("");
   const [error, setError] = useState("");
+  const [smartContract, setSmartContract] = useState("");
+  
   const [network, setNetwork] = useState(undefined);
   const [message, setMessage] = useState("");
   const [signedMessage, setSignedMessage] = useState("");
   const [verified, setVerified] = useState();  
+  
   const [CONFIG, SET_CONFIG] = useState({
     CONTRACT_ADDRESS: "",
     SCAN_LINK: "",
@@ -52,6 +58,7 @@ function App() {
     MARKETPLACE_LINK: "",
     SHOW_BACKGROUND: false,
   });	
+
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
     library,
@@ -90,6 +97,7 @@ function App() {
       }
     }
   };
+  
   const refreshState = () => {
     window.localStorage.setItem("provider", undefined);
     setNetwork("");
@@ -112,12 +120,13 @@ function App() {
     console.log("Gas limit: ", totalGasLimit);
     setFeedback(`Minting your ${CONFIG.NFT_NAME}...`);
     setClaimingNft(true);
-    blockchain.smartContract.methods
-      .mintQueenChiku(mintAmount)
+
+    smartContract.methods
+      .mintQueenChiku(1)
       .send({
         gasLimit: String(totalGasLimit),
         to: CONFIG.CONTRACT_ADDRESS,
-        from: {account},
+        from: account,
         value: totalCostWei,
       })
       .once("error", (err) => {
@@ -131,7 +140,7 @@ function App() {
           `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
         );
         setClaimingNft(false);
-        dispatch(fetchData({account}));
+        //dispatch(fetchData({account}));
       });
   };
 
@@ -168,9 +177,47 @@ function App() {
     const config = await configResponse.json();
     SET_CONFIG(config);
   };
+  
+  
+  const getSmartContract = async () => {
+	  
+    const abiResponse = await fetch("/config/abi.json", {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const abi = await abiResponse.json();
+    const configResponse = await fetch("/config/config.json", {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const CONFIG = await configResponse.json();	  
+	  
+	const { ethereum } = window;
+	console.log(ethereum);
+    Web3EthContract.setProvider(ethereum);
+    let web3 = new Web3(ethereum);
+    try {
+	  const SmartContract = new Web3EthContract(
+		abi,
+		CONFIG.CONTRACT_ADDRESS
+	  );
+	  
+	  setSmartContract(SmartContract);
+		 
+	  } catch (err) {
+		console.log("Something went wrong.");
+          //dispatch(connectFailed("Something went wrong."));
+      }
+	 
+  };    
 
   useEffect(() => {
     getConfig();
+	getSmartContract();
   }, []);  
 
   useEffect(() => {
@@ -241,20 +288,13 @@ function App() {
                 </Button>
                 <Select placeholder="Select network" onChange={handleNetwork}>
                   <option value="3">Ropsten</option>
+                  <option value="56">Binance Smart Chain</option>
                   <option value="4">Rinkeby</option>
                   <option value="42">Kovan</option>
                   <option value="1666600000">Harmony</option>
                   <option value="42220">Celo</option>
                 </Select>
               </VStack>
-            </Box>
-            <Box
-              maxW="sm"
-              borderWidth="1px"
-              borderRadius="lg"
-              overflow="hidden"
-              padding="10px"
-            >
             </Box>
           </HStack>
         )}
@@ -301,18 +341,29 @@ function App() {
             >
               <VStack>
 			   <Button
-					disabled={claimingNft ? 1 : 0}
+					disabled={claimingNft || chainId != 56 ? 1 : 0}
 					onClick={(e) => {
 					  e.preventDefault();
 					  claimNFTs();
 					  getData();
 					}}
-				  >
-					{claimingNft ? "BUSY" : "BUY"}
+				  > 
+				   {chainId == 56 ? (
+					  <Box>
+					  {claimingNft ? "BUSY" : "BUY"}
+					  </Box>
+					) : (
+					  "Wrong Network"
+					)}
 				  </Button>
               </VStack>
             </Box>
-          </HStack>		
+          </HStack>	
+		  <HStack justifyContent="flex-start" alignItems="flex-start">
+            <Text>
+			  {feedback}
+			</Text>
+		   </HStack>	
 		
         <Text>{error ? error.message : null}</Text>
       </VStack>

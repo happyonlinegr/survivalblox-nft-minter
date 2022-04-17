@@ -3,7 +3,7 @@ import { WalletConnectConnector } from "@web3-react/walletconnect-connector";
 //import { connector } from "@web3-react/coinbase-wallet";
 
 const injected = new InjectedConnector({
-  supportedChainIds: [1, 3, 4, 5, 42]
+  supportedChainIds: [1, 3, 4, 5, 42,56]
 });
 
 const walletconnect = new WalletConnectConnector({
