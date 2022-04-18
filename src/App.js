@@ -26,8 +26,7 @@ import Web3 from "web3";
 
 function App() {
   const [claimingNft, setClaimingNft] = useState(false);
-  //const [feedback, setFeedback] = useState(chainId == CONFIG.NETWORK.ID ? "Click claim to mint your NFT." : "Please switch to Ethereum Network");
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState("Click to claim your NFT.");
   const [mintAmount, setMintAmount] = useState(1);	
   const [smartContract, setSmartContract] = useState("");
   const [totalSupply, setTotalSupply] = useState("");
@@ -125,16 +124,6 @@ function App() {
     }
     setMintAmount(newMintAmount);
   };
-  
-  const setInitialFeedBack = async () => {
-    let initialFeedBackMessage = "";
-    if(chainId == CONFIG.NETWORK.ID) {
-      setFeedback(`Click claim to mint your NFT.`);
-    } else {
-	  setFeedback(`Please switch your Network to ${CONFIG.NETWORK.NAME} `);
-	}
-  };  
-  
 
   const incrementMintAmount = () => {
     let newMintAmount = mintAmount + 1;
@@ -201,7 +190,6 @@ function App() {
   useEffect(() => {
     getConfig();
 	getSmartContract();
-	setInitialFeedBack();
   }, []);  
 
 
@@ -296,6 +284,8 @@ function App() {
 		 </VStack>
 		 ) : (
 		  <VStack>
+		      {totalSupply ? (
+			  <>
 			  <Text>
 			  {totalSupply} / {CONFIG.MAX_SUPPLY}
 			  </Text>
@@ -303,7 +293,7 @@ function App() {
 				<Square>
 				  <Button
 					style={{ lineHeight: 0.4 }}
-					disabled={claimingNft ? 1 : 0}
+					disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
 					onClick={(e) => {
 					  e.preventDefault();
 					  decrementMintAmount();
@@ -315,6 +305,7 @@ function App() {
 				<Spacer />
 				<Square>
 				  <Input 
+				  disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
 				  maxW="80px"
 				  value={mintAmount}>
 				  </Input>	
@@ -322,7 +313,7 @@ function App() {
 				<Spacer />
 				<Square>			
 				  <Button
-					disabled={claimingNft ? 1 : 0}
+					disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0 }
 					onClick={(e) => {
 					  e.preventDefault();
 					  incrementMintAmount();
@@ -332,6 +323,10 @@ function App() {
 				  </Button>	
 				</Square>
 			  </HStack>
+			  </>
+			  ) : (
+			  <></>
+			  )}
 			  <HStack justifyContent="flex-start" alignItems="flex-start">
 				<Box
 				  maxW="sm"
@@ -342,6 +337,18 @@ function App() {
 				>
 				  <VStack>
 				   <Button
+						sx={{
+						  background: "linear-gradient(to right, #3dd0d8 0%, rgba(124, 105, 227, 0.64) 100%)",
+						  color:"white",
+						  height:"80px",
+						  fontSize:"2em",
+						  borderRadius:"lg",
+						  paddingLeft:"40px",
+						  paddingRight:"40px"
+						}}			
+						_hover={{
+							background: "#3dd0d8",
+						}}
 						disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
 						onClick={(e) => {
 						  e.preventDefault();
@@ -362,9 +369,7 @@ function App() {
 				</Box>
 			  </HStack>	
 			  <HStack justifyContent="flex-start" alignItems="flex-start">
-				<Text>
-				  {feedback}
-				</Text>
+				  {chainId == CONFIG.NETWORK.ID ? <Text>{feedback}</Text> : <Text>{!chainId ? "You are not Connected." : `Please switch your Network to {CONFIG.NETWORK.NAME}.`}</Text>}
 			   </HStack>	
 		   </VStack>	
 		   
