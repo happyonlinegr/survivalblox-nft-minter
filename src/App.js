@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-//import { useDispatch, useSelector } from "react-redux";
+import store from "./redux/store";
 import {
   VStack,
   useDisclosure,
@@ -11,6 +11,7 @@ import {
   Box,
   Flex,
   Square,
+  Link,
   Spacer
 } from "@chakra-ui/react";
 import SelectWalletModal from "./Modal";
@@ -20,26 +21,18 @@ import { Tooltip } from "@chakra-ui/react";
 import { networkParams } from "./networks";
 import { connectors } from "./connectors";
 import { toHex, truncateAddress } from "./utils";
-//import { connect } from "./redux/blockchain/blockchainActions";
-//import { fetchData } from "./redux/data/dataActions";
 import Web3EthContract from "web3-eth-contract";
 import Web3 from "web3";
 
 function App() {
-  //const dispatch = useDispatch();
-  //const data = useSelector((state) => state.data);  
   const [claimingNft, setClaimingNft] = useState(false);
   const [feedback, setFeedback] = useState(`Click claim to mint your NFT.`);
   const [mintAmount, setMintAmount] = useState(1);	
-  //const [signature, setSignature] = useState("");
-  //const [error, setError] = useState("");
   const [smartContract, setSmartContract] = useState("");
   const [totalSupply, setTotalSupply] = useState("");
   
   const [network, setNetwork] = useState(undefined);
   const [message, setMessage] = useState("");
-  //const [signedMessage, setSignedMessage] = useState("");
-  //const [verified, setVerified] = useState();  
   
   const [CONFIG, SET_CONFIG] = useState({
     CONTRACT_ADDRESS: "",
@@ -78,41 +71,16 @@ function App() {
     const msg = e.target.value;
     setMessage(msg);
   };
-
-
-  /*const switchNetwork = async () => {
-    try {
-      await library.provider.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: toHex(network) }]
-      });
-    } catch (switchError) {
-      if (switchError.code === 4902) {
-        try {
-          await library.provider.request({
-            method: "wallet_addEthereumChain",
-            params: [networkParams[toHex(network)]]
-          });
-        } catch (error) {
-          setFeedback(error);
-        }
-      }
-    }
-  };*/
   
   const refreshState = () => {
     window.localStorage.setItem("provider", undefined);
     setNetwork("");
-    //setMessage("");
-    //setSignature("");
-    //setVerified(undefined);
   };
 
   const disconnect = () => {
     refreshState();
     deactivate();
-  };
- //const blockchain = useSelector((state) => state.blockchain);   
+  }; 
  const claimNFTs = () => {
     let cost = CONFIG.WEI_COST;
     let gasLimit = CONFIG.GAS_LIMIT;
@@ -142,7 +110,6 @@ function App() {
 			  `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
 			);
 			setClaimingNft(false);
-			//dispatch(fetchData({account}));
 		  });
 	} else {
 		setClaimingNft(false);
@@ -165,15 +132,6 @@ function App() {
     }
     setMintAmount(newMintAmount);
   };
-
-  /*const getData = () => {
-    if (account !== "" && smartContract !== null) {
-      dispatch(fetchData(blockchain.account));
-	  console.log(smartContract);
-    }
-  };*/
-  
-  
   const getConfig = async () => {
     const configResponse = await fetch("/config/config.json", {
       headers: {
@@ -184,8 +142,6 @@ function App() {
     const config = await configResponse.json();
     SET_CONFIG(config);
   };
-  
-  
   const getSmartContract = async () => {
 	  
     const abiResponse = await fetch("/config/abi.json", {
@@ -213,11 +169,18 @@ function App() {
 		CONFIG.CONTRACT_ADDRESS
 	  );
 	  
-		setSmartContract(SmartContract);
+	  setSmartContract(SmartContract);		
+	  console.log(SmartContract); 
+
+	  const totalSupply = await store
+		.getState()
+		.smartContract.methods.totalSupply()
+		.call();
 		
-		const totalSupply = await SmartContract.methods.totalSupply().call();
+		setTotalSupply(totalSupply);	
 		
-		setTotalSupply(totalSupply);
+		//const totalSupply = await SmartContract.methods.totalSupply().call();
+		
 		
 	  } catch (err) {
 		console.log("Something went wrong.");
@@ -283,9 +246,30 @@ function App() {
           </Tooltip>
           <Text>{`Network ID: ${chainId ? chainId : "No Network"}`}</Text>
           </VStack>
-		
+		  
+		 {smartContract === null ? (
+		 <VStack>
+			<Text>
+			  Sorry, something went wrong.
+			</Text>
+			<Text>
+			  Could not load data from Contract.
+			</Text>			
+			<Text>
+			  Please try again later.
+			</Text>
+		 </VStack>
+		 ) : (
+		 <>
 		 {Number(totalSupply) >= CONFIG.MAX_SUPPLY ? (
-		 <VStack></VStack>
+		 <VStack>
+			<Text>
+			  The sale has ended.
+			</Text>
+			<Text>
+			  You can still find {CONFIG.NFT_NAME} on <a target={"_blank"} href={CONFIG.MARKETPLACE_LINK}>{CONFIG.MARKETPLACE}</a>	
+			</Text>
+		 </VStack>
 		 ) : (
 		  <VStack>
 			  <Text>
@@ -338,12 +322,11 @@ function App() {
 						onClick={(e) => {
 						  e.preventDefault();
 						  claimNFTs();
-						  //getData();
 						}}
 					  > 
 					   {chainId == 56 ? (
 						  <Box>
-						  {claimingNft ? "Loading" : "Claim ${mintAmount} NFT"}
+						  {claimingNft ? "Loading" :  <Text>Claim {mintAmount} NFT{ mintAmount > 1 ? "s" :"" }</Text>}
 						  </Box>
 						) : (
 						  <Box>
@@ -360,9 +343,10 @@ function App() {
 				</Text>
 			   </HStack>	
 		   </VStack>	
+		   
 		 )}
-		
-        
+		 </>
+		 )}
       </VStack>
       <SelectWalletModal isOpen={isOpen} closeModal={onClose} />
     </>
