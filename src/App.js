@@ -163,28 +163,29 @@ function App() {
 
     Web3EthContract.setProvider(ethereum);
     let web3 = new Web3(ethereum);
-    try {
-	  const SmartContract = new Web3EthContract(
+    //try {
+	  const SmartContract = await new Web3EthContract(
 		abi,
 		CONFIG.CONTRACT_ADDRESS
 	  );
 	  
-	  setSmartContract(SmartContract);		
-	  console.log(SmartContract); 
-
-	 /* const totalSupply = await store
+	  		
+	 
+	
+	  const totalSupply = await store
 		.getState()
-		.smartContract.methods.totalSupply()
+		.SmartContract.methods.totalSupply()
 		.call();
-		
-		setTotalSupply(totalSupply);	*/ 
-		
+
+		/*console.log(store.getState().SmartContract.methods.totalSupply().call());*/
+		// console.log(SmartContract);  
 		//const totalSupply = await SmartContract.methods.totalSupply().call();
+		setTotalSupply(totalSupply);
 		
-		
-	  } catch (err) {
-		console.log("Something went wrong.");
-      }
+		setSmartContract(SmartContract);
+	  //} catch (err) {
+		//console.log(err);
+      //}
 	 
   };    
 
