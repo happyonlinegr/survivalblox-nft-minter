@@ -172,12 +172,12 @@ function App() {
 	  setSmartContract(SmartContract);		
 	  console.log(SmartContract); 
 
-	  const totalSupply = await store
+	 /* const totalSupply = await store
 		.getState()
 		.smartContract.methods.totalSupply()
 		.call();
 		
-		setTotalSupply(totalSupply);	
+		setTotalSupply(totalSupply);	*/ 
 		
 		//const totalSupply = await SmartContract.methods.totalSupply().call();
 		
