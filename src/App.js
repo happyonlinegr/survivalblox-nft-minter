@@ -26,7 +26,8 @@ import Web3 from "web3";
 
 function App() {
   const [claimingNft, setClaimingNft] = useState(false);
-  const [feedback, setFeedback] = useState(`Click claim to mint your NFT.`);
+  //const [feedback, setFeedback] = useState(chainId == CONFIG.NETWORK.ID ? "Click claim to mint your NFT." : "Please switch to Ethereum Network");
+  const [feedback, setFeedback] = useState("");
   const [mintAmount, setMintAmount] = useState(1);	
   const [smartContract, setSmartContract] = useState("");
   const [totalSupply, setTotalSupply] = useState("");
@@ -113,7 +114,7 @@ function App() {
 		  });
 	} else {
 		setClaimingNft(false);
-		setFeedback("Please switch your Network to ${CONFIG.NETWORK.NAME} ");
+		setFeedback(`Please switch your Network to ${CONFIG.NETWORK.NAME} `);
 	};
   };
 
@@ -124,6 +125,16 @@ function App() {
     }
     setMintAmount(newMintAmount);
   };
+  
+  const setInitialFeedBack = async () => {
+    let initialFeedBackMessage = "";
+    if(chainId == CONFIG.NETWORK.ID) {
+      setFeedback(`Click claim to mint your NFT.`);
+    } else {
+	  setFeedback(`Please switch your Network to ${CONFIG.NETWORK.NAME} `);
+	}
+  };  
+  
 
   const incrementMintAmount = () => {
     let newMintAmount = mintAmount + 1;
@@ -162,37 +173,49 @@ function App() {
 	const { ethereum } = window;
 
     Web3EthContract.setProvider(ethereum);
+	
     let web3 = new Web3(ethereum);
-    //try {
-	  const SmartContract = await new Web3EthContract(
+    try {
+	  const SmartContract = new Web3EthContract(
 		abi,
 		CONFIG.CONTRACT_ADDRESS
 	  );
 	  
-	  		
-	 
-	
-	  const totalSupply = await store
-		.getState()
-		.SmartContract.methods.totalSupply()
-		.call();
-
-		/*console.log(store.getState().SmartContract.methods.totalSupply().call());*/
-		// console.log(SmartContract);  
-		//const totalSupply = await SmartContract.methods.totalSupply().call();
-		setTotalSupply(totalSupply);
+	  setSmartContract(SmartContract);		
 		
-		setSmartContract(SmartContract);
-	  //} catch (err) {
-		//console.log(err);
-      //}
+	  const totalSupply =  SmartContract.methods.totalSupply().call();
+
+	  SmartContract.methods
+	    .totalSupply()
+	    .call()
+	    .then((resukt) => {
+		setTotalSupply(resukt);	
+	    });		
+		
+	  } catch (err) {
+		console.log("Something went wrong.");
+      }
 	 
   };    
 
   useEffect(() => {
     getConfig();
 	getSmartContract();
+	setInitialFeedBack();
   }, []);  
+
+
+  useEffect(() => {
+  if(window.ethereum) {
+    window.ethereum.on('chainChanged', () => {
+      getSmartContract();
+    })
+    window.ethereum.on('accountsChanged', () => {
+      getSmartContract();
+    })
+  }
+  }, []);  
+
 
   useEffect(() => {
     const provider = window.localStorage.getItem("provider");
@@ -319,13 +342,13 @@ function App() {
 				>
 				  <VStack>
 				   <Button
-						disabled={claimingNft || chainId != 56 ? 1 : 0}
+						disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
 						onClick={(e) => {
 						  e.preventDefault();
 						  claimNFTs();
 						}}
 					  > 
-					   {chainId == 56 ? (
+					   {chainId == CONFIG.NETWORK.ID? (
 						  <Box>
 						  {claimingNft ? "Loading" :  <Text>Claim {mintAmount} NFT{ mintAmount > 1 ? "s" :"" }</Text>}
 						  </Box>
