@@ -147,8 +147,17 @@ code {
     monospace;
 }
 
-body::-webkit-scrollbar {
-  display: none;
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background:#f4f4f4;
+  border-radius: 0px;
+}
+::-webkit-scrollbar-thumb {
+  background: #000;
+  border-radius: 0px;
 }
 
 body {
