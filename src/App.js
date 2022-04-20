@@ -16,16 +16,24 @@ import {
   Container,
   Spinner,
   Image,
+  ChakraProvider
 } from "@chakra-ui/react";
 import SelectWalletModal from "./Modal";
 import { useWeb3React } from "@web3-react/core";
-import { CheckCircleIcon, WarningIcon,AddIcon,MinusIcon } from "@chakra-ui/icons";
+import { CheckCircleIcon, WarningIcon,AddIcon,MinusIcon,ArrowBackIcon,CopyIcon,CloseIcon } from "@chakra-ui/icons";
 import { Tooltip } from "@chakra-ui/react";
 import { networkParams } from "./networks";
 import { connectors } from "./connectors";
 import { toHex, truncateAddress } from "./utils";
 import Web3EthContract from "web3-eth-contract";
 import Web3 from "web3";
+import fonts from './fonts';
+import { extendTheme } from '@chakra-ui/react';
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
+import '@fontsource/roboto/900.css';
+
 
 function App() {
   const [claimingNft, setClaimingNft] = useState(false);
@@ -215,15 +223,60 @@ function App() {
 
   return (
     <>
-      <VStack background="#1e1d32" justifyContent="center" alignItems="center" minHeight="100vh" paddingTop="12rem" paddingBottom="2rem" color="white">
+
+    
+	<ChakraProvider theme={fonts}>
+	  <HStack justifyContent="space-between" position="relative" background= "#1e1d32" paddingLeft="20px" paddingRight="20px" height="80px">
+		<Box>
+			<Link _hover={{color:"#fff"}} fontSize=".85em" color="#3dcfd7" href='https://survivalblox.com' isExternal>
+			  <ArrowBackIcon /> BACK TO WEBSITE
+			</Link>
+		</Box>	  
+		<Box>
+		  {!active ? (
+			<Button 
+			  fontSize=".85em"
+			  background="linear-gradient(to right, #3dd0d8 0%, rgba(124, 105, 227, 0.64) 100%)"
+			  color="white"
+			  letterSpacing = "1px"
+			  borderRadius="60px"
+			  transition= "background 0.3s"
+				_hover={{
+					background: '#3dd0d8',
+				}}
+			onClick={onOpen}><Text><CopyIcon /> CONNECT</Text></Button>
+		  ) : (
+			<Button 
+			  fontSize=".85em"
+			  background="linear-gradient(to right, #e92750, #ab27e9 100%)"
+			  color="white"
+			  letterSpacing = "1px"
+			  borderRadius="60px"
+			  transition= "background 0.3s"
+				_hover={{
+					background: '#3dd0d8',
+				}}
+			 onClick={disconnect}><Text><CloseIcon /> DISCONNECT</Text></Button>
+		  )}
+		</Box>
+	  </HStack>
+      <Box paddingTop="10rem" background="#1e1d32" justifyContent="center" alignItems="center" minHeight="100vh" paddingBottom="2rem" color="white">
 	    <Container maxW="1000px" background="#292845" borderRadius="15px" padding="0px 90px 90px 90px">
 			<VStack>
-				<Image transform="translateY(-8rem)" marginBottom="-8rem" src='/logo.png' />
+				<Image position="relative" transform="translateY(-50%)" marginBottom="-8rem" src='/logo.png' />
 				<HStack marginBottom="10px">
 				  <Text
 					margin="0"
 					lineHeight="1.15"
-					fontSize={["1.5em", "2em", "3em", "4em"]}
+					fontSize={["1.5em", "2em", "2.5em", "3em"]}
+					fontWeight="900"
+				  >
+					MINT
+				  </Text>				  
+				  <Text
+					margin="0"
+					lineHeight="1.15"
+					fontSize={["1.5em", "2em", "2.5em", "3em"]}
 					fontWeight="900"
 					sx={{
 					  background: "linear-gradient(90deg, #3dd0d8 0%, #7c69e3 70.35%)",
@@ -234,20 +287,13 @@ function App() {
 					NFT
 				  </Text>
 				</HStack>
-				<HStack>
-				  {!active ? (
-					<Button onClick={onOpen}>Connect Wallet</Button>
-				  ) : (
-					<Button onClick={disconnect}>Disconnect</Button>
-				  )}
-				</HStack>
 				<VStack justifyContent="center" alignItems="center" padding="10px 0">
 				  <HStack>
 					<Tooltip label={account} placement="right"><Text>{`${truncateAddress(account)}`}</Text></Tooltip>
 					{active ? (
-					  <CheckCircleIcon color="green" />
+					  <CheckCircleIcon color="#3dcfd7" />
 					) : (
-					  <WarningIcon color="#cd5700" />
+					  <WarningIcon color="#df4d81" />
 					)}
 				  </HStack>
 
@@ -281,21 +327,24 @@ function App() {
 					  {totalSupply ? (
 					  <>
 					  <VStack marginBottom="2rem" marginTop="2rem">
-					  <Text color="#3dcfd7" textShadow="0 2px 4.8px rgb(0 0 0 / 30%)" fontSize={["1.25em", "1.5em", "1.75em", "2em"]} fontWeight="600">
+					  <Text color="#c2d4f8" textShadow="0 2px 4.8px rgb(0 0 0 / 30%)" fontSize={["1.25em", "1.5em", "1.75em", "2em"]} fontWeight="600">
 					  {totalSupply} / {CONFIG.MAX_SUPPLY}
 					  </Text>
 					  </VStack>
 					  <HStack spacing='12px'>
 						<Square>
 						  <Button
-							background="#fff"
-							color="#1e1d32"
+							background="rgba(24, 23, 40, 0.8)"
+							color="#fff"
 							borderRadius="100%"
 							width="50px"
 							height="50px"
 							fontSize={["1.25em", "1.5em", "1.75em", "2em"]}
 							style={{ lineHeight: 0.4 }}
 							disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
+							_hover = {{
+								color : "#1e1d32"
+							}}							
 							onClick={(e) => {
 							  e.preventDefault();
 							  decrementMintAmount();
@@ -319,13 +368,16 @@ function App() {
 						<Spacer />
 						<Square>			
 						  <Button
-							background="#fff"
-							color="#1e1d32"
+							background="rgba(24, 23, 40, 0.8)"
+							color="#fff"
 							borderRadius="100%"
 							width="50px"
 							height="50px"
 							fontSize={["1.25em", "1.5em", "1.75em", "2em"]}
 							disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0 }
+							_hover = {{
+								color : "#1e1d32"
+							}}
 							onClick={(e) => {
 							  e.preventDefault();
 							  incrementMintAmount();
@@ -352,7 +404,8 @@ function App() {
 							  background="linear-gradient(to right, #3dd0d8 0%, rgba(124, 105, 227, 0.64) 100%)"
 							  color="white"
 							  height="80px"
-							  fontSize={["1.25em", "1.5em", "1.75em", "2em"]}
+							  letterSpacing = "1px"
+							  fontSize={["1em", "1.15em", "1.25em", "1.5em"]}
 							  borderRadius="60px"
 							  paddingLeft="40px"
 							  paddingRight="40px"
@@ -368,11 +421,11 @@ function App() {
 							  > 
 							   {chainId == CONFIG.NETWORK.ID? (
 								  <Box>
-								  {claimingNft ?  <Text><Spinner size='md' /> Claiming </Text>:  <Text>Claim {mintAmount} NFT{ mintAmount > 1 ? "s" :"" }</Text>}
+								  {claimingNft ?  <Text><Spinner size='md' /> CLAIMING </Text>:  <Text>CLAIM {mintAmount} NFT{ mintAmount > 1 ? "S" :"" }</Text>}
 								  </Box>
 								) : (
 								  <Box>
-								  {chainId ? "Wrong Network" : "Connect to Claim"}
+								  {chainId ? "WRONG NETWORK" : "CONNECT TO CLAIM"}
 								  </Box>
 								)}
 							  </Button>
@@ -389,7 +442,8 @@ function App() {
 				 )}
 			 </VStack>
 		 </Container>
-      </VStack>
+      </Box>
+	</ChakraProvider>
       <SelectWalletModal isOpen={isOpen} closeModal={onClose} />
     </>
   );
