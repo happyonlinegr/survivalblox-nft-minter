@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import store from "./redux/store";
+import SelectWalletModal from "./Modal";
+import { useWeb3React } from "@web3-react/core";
+import { CheckCircleIcon, WarningIcon,AddIcon,MinusIcon,ArrowBackIcon,CopyIcon,CloseIcon } from "@chakra-ui/icons";
+import { Tooltip } from "@chakra-ui/react";
+import { connectors } from "./connectors";
+import { toHex, truncateAddress } from "./utils";
+import Web3 from "web3";
+import fonts from './fonts';
+
 import {
   VStack,
   useDisclosure,
@@ -18,17 +26,7 @@ import {
   Image,
   ChakraProvider
 } from "@chakra-ui/react";
-import SelectWalletModal from "./Modal";
-import { useWeb3React } from "@web3-react/core";
-import { CheckCircleIcon, WarningIcon,AddIcon,MinusIcon,ArrowBackIcon,CopyIcon,CloseIcon } from "@chakra-ui/icons";
-import { Tooltip } from "@chakra-ui/react";
-import { networkParams } from "./networks";
-import { connectors } from "./connectors";
-import { toHex, truncateAddress } from "./utils";
-import Web3EthContract from "web3-eth-contract";
-import Web3 from "web3";
-import fonts from './fonts';
-import { extendTheme } from '@chakra-ui/react';
+
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
@@ -40,16 +38,16 @@ function App() {
   const [feedback, setFeedback] = useState("Click to claim your NFT.");
   const [mintAmount, setMintAmount] = useState(1);	
   const [smartContract, setSmartContract] = useState("");
+  const [abi, setAbi] = useState("");
   const [totalSupply, setTotalSupply] = useState("");
-  
-  const [network, setNetwork] = useState(undefined);
-  const [message, setMessage] = useState("");
-  
+
   const [CONFIG, SET_CONFIG] = useState({
     CONTRACT_ADDRESS: "",
     SCAN_LINK: "",
     NETWORK: {
       NAME: "",
+      RPC: "",
+      BRIDGE: "",
       SYMBOL: "",
       ID: 0,
     },
@@ -62,6 +60,7 @@ function App() {
     MARKETPLACE: "",
     MARKETPLACE_LINK: "",
     SHOW_BACKGROUND: false,
+	INFURA_KEY : ""
   });	
 
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -74,18 +73,8 @@ function App() {
     active
   } = useWeb3React();
 
-  const handleNetwork = (e) => {
-    const id = e.target.value;
-    setNetwork(Number(id));
-  };
-  const handleInput = (e) => {
-    const msg = e.target.value;
-    setMessage(msg);
-  };
-  
   const refreshState = () => {
     window.localStorage.setItem("provider", undefined);
-    setNetwork("");
   };
 
   const disconnect = () => {
@@ -101,27 +90,41 @@ function App() {
     console.log("Gas limit: ", totalGasLimit);
     setFeedback(`Minting your ${CONFIG.NFT_NAME}...`);
 	setClaimingNft(true);
-	if (chainId == CONFIG.NETWORK.ID) {
-		smartContract.methods
-		  .mintQueenChiku(1)
-		  .send({
-			gasLimit: String(totalGasLimit),
-			to: CONFIG.CONTRACT_ADDRESS,
-			from: account,
-			value: totalCostWei,
-		  })
-		  .once("error", (err) => {
+	
+	if (chainId == CONFIG.NETWORK.ID) {	  
+
+		const web3 = new Web3(library.provider);
+		
+		try {
+		    const SmartContract = new web3.eth.Contract(
+			abi,
+			  CONFIG.CONTRACT_ADDRESS
+		    );
+		    SmartContract.setProvider(library.provider);
+			SmartContract.methods
+			  .mintQueenChiku(1)
+			  .send({
+				gasLimit: String(totalGasLimit),
+				to: CONFIG.CONTRACT_ADDRESS,
+				from: account,
+				value: totalCostWei,
+			  })
+			  .once("error", (err) => {
+				console.log(err);
+				setFeedback("Sorry, something went wrong please try again later.");
+				setClaimingNft(false);
+			  })
+			  .then((receipt) => {
+				console.log(receipt);
+				setFeedback(
+				  `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
+				);
+				setClaimingNft(false);
+			  });
+		  } catch (err) {
 			console.log(err);
-			setFeedback("Sorry, something went wrong please try again later.");
-			setClaimingNft(false);
-		  })
-		  .then((receipt) => {
-			console.log(receipt);
-			setFeedback(
-			  `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
-			);
-			setClaimingNft(false);
-		  });
+		  }
+
 	} else {
 		setClaimingNft(false);
 		setFeedback(`Please switch your Network to ${CONFIG.NETWORK.NAME} `);
@@ -153,8 +156,11 @@ function App() {
     const config = await configResponse.json();
     SET_CONFIG(config);
   };
+  
+
+
   const getSmartContract = async () => {
-	  
+
     const abiResponse = await fetch("/config/abi.json", {
       headers: {
         "Content-Type": "application/json",
@@ -162,6 +168,7 @@ function App() {
       },
     });
     const abi = await abiResponse.json();
+	setAbi(abi);
     const configResponse = await fetch("/config/config.json", {
       headers: {
         "Content-Type": "application/json",
@@ -170,30 +177,25 @@ function App() {
     });
     const CONFIG = await configResponse.json();	  
 	  
-	const { ethereum } = window;
-
-    Web3EthContract.setProvider(ethereum);
+	const web3 = new Web3('https://bsc-dataseed1.binance.org:443');	
 	
-    let web3 = new Web3(ethereum);
     try {
-	  const SmartContract = new Web3EthContract(
+	  const SmartContract = new web3.eth.Contract(
 		abi,
 		CONFIG.CONTRACT_ADDRESS
 	  );
 	  
-	  setSmartContract(SmartContract);		
-		
-	  const totalSupply =  SmartContract.methods.totalSupply().call();
+	  setSmartContract(SmartContract);	
 
 	  SmartContract.methods
 	    .totalSupply()
 	    .call()
-	    .then((resukt) => {
-		setTotalSupply(resukt);	
+	    .then((result) => {
+		setTotalSupply(result);	
 	    });		
 		
 	  } catch (err) {
-		console.log("Something went wrong.");
+		console.log(err);
       }
 	 
   };    
@@ -204,16 +206,16 @@ function App() {
   }, []);  
 
 
-  useEffect(() => {
-  if(window.ethereum) {
-    window.ethereum.on('chainChanged', () => {
-      getSmartContract();
-    })
-    window.ethereum.on('accountsChanged', () => {
-      getSmartContract();
-    })
-  }
-  }, []);  
+  /*useEffect(() => {
+	  if(library.provider) {
+		library.provider.on('chainChanged', () => {
+		  getSmartContract();
+		})
+		window.ethereum.on('accountsChanged', () => {
+		  getSmartContract();
+		})
+	  }
+  }, []);  */
 
 
   useEffect(() => {
@@ -223,8 +225,6 @@ function App() {
 
   return (
     <>
-
-    
 	<ChakraProvider theme={fonts}>
 	  <HStack justifyContent="space-between" position="relative" background= "#1e1d32" paddingLeft="20px" paddingRight="20px" height="80px">
 		<Box>
@@ -433,7 +433,7 @@ function App() {
 						</Box>
 					  </HStack>	
 					  <HStack justifyContent="flex-start" alignItems="flex-start">
-						  {chainId == CONFIG.NETWORK.ID ? <Text>{feedback}</Text> : <Text>{!chainId ? "You are not Connected." : `Please switch your Network to {CONFIG.NETWORK.NAME}.`}</Text>}
+						  {chainId == CONFIG.NETWORK.ID ? <Text>{feedback}</Text> : <Text>{!chainId ? "You are not Connected." : `Please switch your Network to ${CONFIG.NETWORK.NAME}.`}</Text>}
 					   </HStack>	
 				   </VStack>	
 				   
