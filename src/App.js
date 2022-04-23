@@ -35,7 +35,9 @@ import '@fontsource/roboto/900.css';
 
 function App() {
   const [claimingNft, setClaimingNft] = useState(false);
-  const [feedback, setFeedback] = useState("Click to claim your NFT.");
+  
+  const [feedback, setFeedback] = useState("");
+  
   const [mintAmount, setMintAmount] = useState(1);	
   const [smartContract, setSmartContract] = useState("");
   const [abi, setAbi] = useState("");
@@ -58,9 +60,7 @@ function App() {
     DISPLAY_COST: 0,
     GAS_LIMIT: 0,
     MARKETPLACE: "",
-    MARKETPLACE_LINK: "",
-    SHOW_BACKGROUND: false,
-	INFURA_KEY : ""
+    MARKETPLACE_LINK: ""
   });	
 
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -81,7 +81,71 @@ function App() {
     refreshState();
     deactivate();
   }; 
- const claimNFTs = () => {
+
+  const decrementMintAmount = () => {
+    let newMintAmount = mintAmount - 1;
+    if (newMintAmount < 1) {
+      newMintAmount = 1;
+    }
+    setMintAmount(newMintAmount);
+  };
+
+  const incrementMintAmount = () => {
+    let newMintAmount = mintAmount + 1;
+    if (newMintAmount > 10) {
+      newMintAmount = 10;
+    }
+    setMintAmount(newMintAmount);
+  };
+  
+  useEffect(() => {
+	initialize();
+  }, []); 
+
+  const initialize = async () => {
+	  
+    const abiResponse = await fetch("/config/abi.json", {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const abi = await abiResponse.json();
+	setAbi(abi);
+    const configResponse = await fetch("/config/config.json", {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const CONFIG = await configResponse.json();	  
+	
+	SET_CONFIG(CONFIG);		
+	
+	const web3 = new Web3(CONFIG.NETWORK.RPC);	
+	
+    try {
+	  const SmartContract = new web3.eth.Contract(
+		abi,
+		CONFIG.CONTRACT_ADDRESS
+	  );
+	  
+	  setSmartContract(SmartContract);	
+
+	  SmartContract.methods
+	    .totalSupply()
+	    .call()
+	    .then((result) => {
+		setTotalSupply(result);	
+	    });		
+		
+	  } catch (err) {
+		console.log(err);
+      }
+	 
+  };    
+  
+  const claimNFTs = () => {
     let cost = CONFIG.WEI_COST;
     let gasLimit = CONFIG.GAS_LIMIT;
     let totalCostWei = String(cost * mintAmount);
@@ -90,7 +154,7 @@ function App() {
     console.log("Gas limit: ", totalGasLimit);
     setFeedback(`Minting your ${CONFIG.NFT_NAME}...`);
 	setClaimingNft(true);
-	
+	console.log('Network ID is',CONFIG.NETWORK.ID)
 	if (chainId == CONFIG.NETWORK.ID) {	  
 
 		const web3 = new Web3(library.provider);
@@ -129,322 +193,261 @@ function App() {
 		setClaimingNft(false);
 		setFeedback(`Please switch your Network to ${CONFIG.NETWORK.NAME} `);
 	};
-  };
-
-  const decrementMintAmount = () => {
-    let newMintAmount = mintAmount - 1;
-    if (newMintAmount < 1) {
-      newMintAmount = 1;
-    }
-    setMintAmount(newMintAmount);
-  };
-
-  const incrementMintAmount = () => {
-    let newMintAmount = mintAmount + 1;
-    if (newMintAmount > 10) {
-      newMintAmount = 10;
-    }
-    setMintAmount(newMintAmount);
-  };
-  const getConfig = async () => {
-    const configResponse = await fetch("/config/config.json", {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    });
-    const config = await configResponse.json();
-    SET_CONFIG(config);
-  };
-  
+  };  
 
 
-  const getSmartContract = async () => {
-
-    const abiResponse = await fetch("/config/abi.json", {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    });
-    const abi = await abiResponse.json();
-	setAbi(abi);
-    const configResponse = await fetch("/config/config.json", {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    });
-    const CONFIG = await configResponse.json();	  
-	  
-	const web3 = new Web3('https://bsc-dataseed1.binance.org:443');	
-	
-    try {
-	  const SmartContract = new web3.eth.Contract(
-		abi,
-		CONFIG.CONTRACT_ADDRESS
-	  );
-	  
-	  setSmartContract(SmartContract);	
-
-	  SmartContract.methods
-	    .totalSupply()
-	    .call()
-	    .then((result) => {
-		setTotalSupply(result);	
-	    });		
-		
-	  } catch (err) {
-		console.log(err);
-      }
-	 
-  };    
-
-  useEffect(() => {
-    getConfig();
-	getSmartContract();
-  }, []);  
-
-
-  /*useEffect(() => {
-	  if(library.provider) {
-		library.provider.on('chainChanged', () => {
-		  getSmartContract();
-		})
-		window.ethereum.on('accountsChanged', () => {
-		  getSmartContract();
-		})
-	  }
-  }, []);  */
 
 
   useEffect(() => {
     const provider = window.localStorage.getItem("provider");
     if (provider) activate(connectors[provider]);
   }, []);
-
+  
+  useEffect(() => {
+	  if (library !== undefined) {
+		library.provider.on('chainChanged', () => {
+		  initialize();
+		})
+		window.ethereum.on('accountsChanged', () => {
+		  initialize();
+		})
+	  }
+  }, []);  
+  
+  const checkFeedBack = () => {
+      if(chainId) {
+	  if(chainId == CONFIG.NETWORK.ID) {
+		setFeedback(`Click to claim your NFT.`);
+	  } else {
+		setFeedback(`Please switch your Network to ${CONFIG.NETWORK.NAME}.`);  
+	  }
+    } else {
+	  setFeedback(`You are not Connected.`);
+    }	  
+  };  
+  
   return (
     <>
+	
 	<ChakraProvider theme={fonts}>
-	  <HStack justifyContent="space-between" position="relative" background= "#1e1d32" paddingLeft="20px" paddingRight="20px" height="80px">
-		<Box>
-			<Link _hover={{color:"#fff"}} fontSize=".85em" color="#3dcfd7" href='https://survivalblox.com' isExternal>
-			  <ArrowBackIcon /> BACK TO WEBSITE
-			</Link>
-		</Box>	  
-		<Box>
-		  {!active ? (
-			<Button 
-			  fontSize=".85em"
-			  background="linear-gradient(to right, #3dd0d8 0%, rgba(124, 105, 227, 0.64) 100%)"
-			  color="white"
-			  letterSpacing = "1px"
-			  borderRadius="60px"
-			  transition= "background 0.3s"
-				_hover={{
-					background: '#3dd0d8',
-				}}
-			onClick={onOpen}><Text><CopyIcon /> CONNECT</Text></Button>
-		  ) : (
-			<Button 
-			  fontSize=".85em"
-			  background="linear-gradient(to right, #e92750, #ab27e9 100%)"
-			  color="white"
-			  letterSpacing = "1px"
-			  borderRadius="60px"
-			  transition= "background 0.3s"
-				_hover={{
-					background: '#3dd0d8',
-				}}
-			 onClick={disconnect}><Text><CloseIcon /> DISCONNECT</Text></Button>
-		  )}
-		</Box>
-	  </HStack>
-      <Box paddingTop="10rem" background="#1e1d32" justifyContent="center" alignItems="center" minHeight="100vh" paddingBottom="2rem" color="white">
-	    <Container maxW="1000px" background="#292845" borderRadius="15px" padding="0px 90px 90px 90px">
-			<VStack>
-				<Image position="relative" transform="translateY(-50%)" marginBottom="-8rem" src='/logo.png' />
-				<HStack marginBottom="10px">
-				  <Text
-					margin="0"
-					lineHeight="1.15"
-					fontSize={["1.5em", "2em", "2.5em", "3em"]}
-					fontWeight="900"
-				  >
-					MINT
-				  </Text>				  
-				  <Text
-					margin="0"
-					lineHeight="1.15"
-					fontSize={["1.5em", "2em", "2.5em", "3em"]}
-					fontWeight="900"
-					sx={{
-					  background: "linear-gradient(90deg, #3dd0d8 0%, #7c69e3 70.35%)",
-					  WebkitBackgroundClip: "text",
-					  WebkitTextFillColor: "transparent"
-					}}
-				  >
-					NFT
-				  </Text>
-				</HStack>
-				<VStack justifyContent="center" alignItems="center" padding="10px 0">
-				  <HStack>
-					<Tooltip label={account} placement="right"><Text>{`${truncateAddress(account)}`}</Text></Tooltip>
-					{active ? (
-					  <CheckCircleIcon color="#3dcfd7" />
-					) : (
-					  <WarningIcon color="#df4d81" />
-					)}
-				  </HStack>
-
-				  </VStack>
-				  
-				 {smartContract === null ? (
-				 <VStack>
-					<Text>
-					  Sorry, something went wrong.
-					</Text>
-					<Text>
-					  Could not load data from Contract.
-					</Text>			
-					<Text>
-					  Please try again later.
-					</Text>
-				 </VStack>
-				 ) : (
-				 <>
-				 {Number(totalSupply) >= CONFIG.MAX_SUPPLY ? (
-				 <VStack>
-					<Text>
-					  The sale has ended.
-					</Text>
-					<Text>
-					  You can still find {CONFIG.NFT_NAME} on <a target={"_blank"} href={CONFIG.MARKETPLACE_LINK}>{CONFIG.MARKETPLACE}</a>	
-					</Text>
-				 </VStack>
-				 ) : (
-				  <VStack>
-					  {totalSupply ? (
-					  <>
-					  <VStack marginBottom="2rem" marginTop="2rem">
-					  <Text color="#c2d4f8" textShadow="0 2px 4.8px rgb(0 0 0 / 30%)" fontSize={["1.25em", "1.5em", "1.75em", "2em"]} fontWeight="600">
-					  {totalSupply} / {CONFIG.MAX_SUPPLY}
+		<VStack minHeight="100vh" background="#1e1d32">
+		  <Container maxW="1000px" >
+			<HStack justifyContent="space-between" height="80px">
+				<Box>
+					<Link _hover={{color:"#fff"}} fontSize=".85em" color="#3dcfd7" href='https://survivalblox.com' isExternal>
+					  <ArrowBackIcon /> BACK TO WEBSITE
+					</Link>
+				</Box>	  
+				<Box>
+				  {!active ? (
+					<Button 
+					  fontSize=".85em"
+					  background="linear-gradient(to right, #3dd0d8 0%, rgba(124, 105, 227, 0.64) 100%)"
+					  color="white"
+					  letterSpacing = "1px"
+					  borderRadius="60px"
+					  transition= "background 0.3s"
+						_hover={{
+							background: '#3dd0d8',
+						}}
+					onClick={onOpen}><Text><CopyIcon /> CONNECT</Text></Button>
+				  ) : (
+					<Button 
+					  fontSize=".85em"
+					  background="linear-gradient(to right, tomato, purple 100%)"
+					  color="white"
+					  letterSpacing = "1px"
+					  borderRadius="60px"
+					  transition= "background 0.3s"
+						_hover={{
+							background: '#3dd0d8',
+						}}
+					 onClick={disconnect}><Text><CloseIcon fontSize="10px" /> DISCONNECT</Text></Button>
+				  )}
+				</Box>
+			</HStack>
+		  </Container>
+		  <Container maxW="1000px" paddingTop={["50px","25px", "0"]}>
+			<VStack background="#292845" borderRadius="15px" padding={["0 30px 30px 30px", "0 60px 60px 60px", "0 90px 90px 90px"]} justifyContent="center" alignItems="center" marginBottom="2rem" color="white">
+					<Image position="relative" marginTop="-50px" src='/logo.png' />
+					<HStack marginBottom="10px">
+					  <Text
+						margin="0"
+						lineHeight="1.15"
+						fontSize={["2em", "2.5em", "3em"]}
+						fontWeight="900"
+					  >
+						MINT
+					  </Text>				  
+					  <Text
+						margin="0"
+						lineHeight="1.15"
+						fontSize={["2em", "2.5em", "3em"]}
+						fontWeight="900"
+						sx={{
+						  background: "linear-gradient(90deg, #3dd0d8 0%, #7c69e3 70.35%)",
+						  WebkitBackgroundClip: "text",
+						  WebkitTextFillColor: "transparent"
+						}}
+					  >
+						NFT's
 					  </Text>
-					  </VStack>
-					  <HStack spacing='12px'>
-						<Square>
-						  <Button
-							background="rgba(24, 23, 40, 0.8)"
-							color="#fff"
-							borderRadius="100%"
-							width="50px"
-							height="50px"
-							fontSize={["1.25em", "1.5em", "1.75em", "2em"]}
-							style={{ lineHeight: 0.4 }}
-							disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
-							_hover = {{
-								color : "#1e1d32"
-							}}							
-							onClick={(e) => {
-							  e.preventDefault();
-							  decrementMintAmount();
-							}}
-						  >
-							-
-						  </Button>	
-						</Square>
-						<Spacer />
-						<Square>
-						  <Box 
-						  disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
-						  maxW="80px"
-						  border="0px"
-						  >
-						  <Text>
-						  {mintAmount}
-						  </Text>
-						  </Box>	
-						</Square>
-						<Spacer />
-						<Square>			
-						  <Button
-							background="rgba(24, 23, 40, 0.8)"
-							color="#fff"
-							borderRadius="100%"
-							width="50px"
-							height="50px"
-							fontSize={["1.25em", "1.5em", "1.75em", "2em"]}
-							disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0 }
-							_hover = {{
-								color : "#1e1d32"
-							}}
-							onClick={(e) => {
-							  e.preventDefault();
-							  incrementMintAmount();
-							}}
-						  >
-							+
-						  </Button>	
-						</Square>
+					</HStack>
+					<VStack justifyContent="center" alignItems="center" padding="10px 0">
+					  <HStack>
+						<Tooltip label={account} placement="right"><Text>{`${truncateAddress(account)}`}</Text></Tooltip>
+						{active ? (
+						  <CheckCircleIcon color="#3dcfd7" />
+						) : (
+						  <WarningIcon color="#df4d81" />
+						)}
 					  </HStack>
-					  </>
-					  ) : (
-					  <></>
-					  )}
-					  <HStack justifyContent="flex-start" alignItems="flex-start">
-						<Box
-						  maxW="sm"
-						  borderWidth="1px"
-						  borderRadius="lg"
-						  overflow="hidden"
-						  padding="10px"
-						>
-						  <VStack>
-						   <Button
-							  background="linear-gradient(to right, #3dd0d8 0%, rgba(124, 105, 227, 0.64) 100%)"
-							  color="white"
-							  height="80px"
-							  letterSpacing = "1px"
-							  fontSize={["1em", "1.15em", "1.25em", "1.5em"]}
-							  borderRadius="60px"
-							  paddingLeft="40px"
-							  paddingRight="40px"
-							  transition= "background 0.3s"
-								_hover={{
-									background: '#3dd0d8',
-								}}
+
+					  </VStack>
+					  
+					 {smartContract === null ? (
+					 <VStack>
+						<Text>
+						  Sorry, something went wrong.
+						</Text>
+						<Text>
+						  Could not load data from Contract.
+						</Text>			
+						<Text>
+						  Please try again later.
+						</Text>
+					 </VStack>
+					 ) : (
+					 <>
+					 {Number(totalSupply) >= CONFIG.MAX_SUPPLY ? (
+					 <VStack>
+						<Text>
+						  The sale has ended.
+						</Text>
+						<Text>
+						  You can still find {CONFIG.NFT_NAME} on <Link _hover={{color:"#fff"}} color="#3dcfd7" href={CONFIG.MARKETPLACE_LINK}>{CONFIG.MARKETPLACE}</Link>	
+						</Text>
+					 </VStack>
+					 ) : (
+					  <VStack>
+						  <VStack marginBottom="2rem" marginTop="2rem">
+							  <Text color="#c2d4f8" textShadow="0 2px 4.8px rgb(0 0 0 / 30%)" fontSize={["1.75em", "2em"]} fontWeight="600">
+								{totalSupply ? totalSupply : <Spinner size='md' /> } of {CONFIG.MAX_SUPPLY}
+							  </Text>
+							  <Text>
+							  Have been minted.
+							  </Text>
+						  </VStack>
+						  <HStack spacing='12px'>
+							<Square>
+							  <Button
+								background="rgba(24, 23, 40, 0.8)"
+								color="#fff"
+								borderRadius="100%"
+								width="50px"
+								height="50px"
+								fontSize={["1.5em", "1.75em", "2em"]}
+								style={{ lineHeight: 0.4 }}
 								disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
+								_hover = {{
+									color : "#1e1d32"
+								}}							
 								onClick={(e) => {
 								  e.preventDefault();
-								  claimNFTs();
+								  decrementMintAmount();
 								}}
-							  > 
-							   {chainId == CONFIG.NETWORK.ID? (
-								  <Box>
-								  {claimingNft ?  <Text><Spinner size='md' /> CLAIMING </Text>:  <Text>CLAIM {mintAmount} NFT{ mintAmount > 1 ? "S" :"" }</Text>}
-								  </Box>
-								) : (
-								  <Box>
-								  {chainId ? "WRONG NETWORK" : "CONNECT TO CLAIM"}
-								  </Box>
-								)}
-							  </Button>
-						  </VStack>
-						</Box>
-					  </HStack>	
-					  <HStack justifyContent="flex-start" alignItems="flex-start">
-						  {chainId == CONFIG.NETWORK.ID ? <Text>{feedback}</Text> : <Text>{!chainId ? "You are not Connected." : `Please switch your Network to ${CONFIG.NETWORK.NAME}.`}</Text>}
-					   </HStack>	
-				   </VStack>	
-				   
-				 )}
-				 </>
-				 )}
-			 </VStack>
-		 </Container>
-      </Box>
+							  >
+								-
+							  </Button>	
+							</Square>
+							<Spacer />
+							<Square>
+							  <Box 
+							  disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
+							  maxW="80px"
+							  border="0px"
+							  >
+							  <Text>
+							  {mintAmount}
+							  </Text>
+							  </Box>	
+							</Square>
+							<Spacer />
+							<Square>			
+							  <Button
+								background="rgba(24, 23, 40, 0.8)"
+								color="#fff"
+								borderRadius="100%"
+								width="50px"
+								height="50px"
+								fontSize={["1.25em", "1.5em", "1.75em", "2em"]}
+								disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0 }
+								_hover = {{
+									color : "#1e1d32"
+								}}
+								onClick={(e) => {
+								  e.preventDefault();
+								  incrementMintAmount();
+								}}
+							  >
+								+
+							  </Button>	
+							</Square>
+						  </HStack>
+						  <HStack justifyContent="flex-start" alignItems="flex-start">
+							<Box
+							  maxW="sm"
+							  borderWidth="1px"
+							  borderRadius="lg"
+							  overflow="hidden"
+							  padding="10px"
+							>
+							  <VStack>
+							   <Button
+								  background="linear-gradient(to right, #3dd0d8 0%, rgba(124, 105, 227, 0.64) 100%)"
+								  color="white"
+								  height={["60px", "80px"]}
+								  letterSpacing = "1px"
+								  fontSize={["1em", "1.15em", "1.25em", "1.5em"]}
+								  borderRadius="60px"
+								  paddingLeft={["30px", "40px"]}
+								  paddingRight={["30px", "40px"]}
+								  transition= "background 0.3s"
+									_hover={{
+										background: '#3dd0d8',
+									}}
+									disabled={claimingNft || chainId != CONFIG.NETWORK.ID ? 1 : 0}
+									onClick={(e) => {
+									  e.preventDefault();
+									  claimNFTs();
+									}}
+								  > 
+								   {chainId == CONFIG.NETWORK.ID? (
+									  <Box>
+									  {claimingNft ?  <Text><Spinner size='md' /> CLAIMING </Text>:  <Text>CLAIM {mintAmount} NFT{ mintAmount > 1 ? "'s" :"" }</Text>}
+									  </Box>
+									) : (
+									  <Box>
+									  {chainId ? "WRONG NETWORK" : "CONNECT TO CLAIM"}
+									  </Box>
+									)}
+								  </Button>
+							  </VStack>
+							</Box>
+						  </HStack>	
+						  <HStack justifyContent="flex-start" alignItems="flex-start">
+							  <Text>{feedback}</Text>
+						   </HStack>	
+					   </VStack>	
+					   
+					 )}
+					 </>
+					 )} 
+			  </VStack>
+		  </Container>
+		</VStack>  
 	</ChakraProvider>
-      <SelectWalletModal isOpen={isOpen} closeModal={onClose} />
+    <SelectWalletModal isOpen={isOpen} closeModal={onClose} />
     </>
   );
 }

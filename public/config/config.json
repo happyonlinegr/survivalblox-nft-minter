@@ -15,7 +15,5 @@
   "DISPLAY_COST": 0.05,
   "GAS_LIMIT": 285000,
   "MARKETPLACE": "TofuNFT",
-  "MARKETPLACE_LINK": "https://tofunft.com/discover/items?contracts=9549",
-  "SHOW_BACKGROUND": true,
-  "INFURA_KEY" : "487c4a9cabd145229bdcbc05bcb5b21f"
+  "MARKETPLACE_LINK": "https://tofunft.com/discover/items?contracts=9549"
 }
