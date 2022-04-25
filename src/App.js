@@ -193,7 +193,7 @@ function App() {
 				totalCostWei = String(totalPrice * mintAmount);
 				if(totalCostWei) {
 					SmartContract.methods
-					  .mintQueenChiku(1)
+					  .mintQueenChiku(mintAmount)
 					  .send({
 						gasLimit: String(totalGasLimit),
 						to: CONFIG.CONTRACT_ADDRESS,
@@ -229,7 +229,14 @@ function App() {
 	};
   };  
   
-  const getFeedback = () => {
+  const getFeedback = async () => {
+    const configResponse = await fetch("/config/config.json", {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const CONFIG = await configResponse.json();	  
     if(chainId) {
 	  if(chainId == CONFIG.NETWORK.ID) {
 		setFeedback(`Click to claim your NFT.`);
@@ -247,7 +254,7 @@ function App() {
   }, []);
   useEffect(() => {
     getFeedback();
-  }, [library]);
+  }, [chainId]);
 
   useEffect(() => {
 	initialize();
