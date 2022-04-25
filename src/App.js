@@ -42,6 +42,8 @@ function App() {
   const [smartContract, setSmartContract] = useState("");
   const [abi, setAbi] = useState("");
   const [totalSupply, setTotalSupply] = useState("");
+  const [totalPrice, setTotalPrice] = useState("");
+  const [totalPriceFixed, setTotalPriceFixed] = useState("");
 
   const [CONFIG, SET_CONFIG] = useState({
     CONTRACT_ADDRESS: "",
@@ -97,13 +99,9 @@ function App() {
     }
     setMintAmount(newMintAmount);
   };
-  
-  useEffect(() => {
-	initialize();
-  }, []); 
 
   const initialize = async () => {
-	  
+
     const abiResponse = await fetch("/config/abi.json", {
       headers: {
         "Content-Type": "application/json",
@@ -130,14 +128,38 @@ function App() {
 		CONFIG.CONTRACT_ADDRESS
 	  );
 	  
-	  setSmartContract(SmartContract);	
-
+	  SmartContract.methods
+	    .calculatePrice()
+	    .call()
+	    .then((result) => {
+		setTotalPrice(result);		
+		setTotalPriceFixed(result > 0 ? (result / 10 ** 18).toFixed(2) : '0.00');	
+	    });		  
+	  
 	  SmartContract.methods
 	    .totalSupply()
 	    .call()
 	    .then((result) => {
-		setTotalSupply(result);	
+		setTotalSupply(parseInt(result));	
 	    });		
+		
+	  const interval = setInterval(() => {
+		  SmartContract.methods
+			.totalSupply()
+			.call()
+			.then((result) => {
+			setTotalSupply(parseInt(result));	
+			});	
+		  SmartContract.methods
+			.calculatePrice()
+			.call()
+			.then((result) => {
+			setTotalPriceFixed(result > 0 ? (result / 10 ** 18).toFixed(2) : '0.00');	
+			setTotalPrice(result);	
+			});			
+	  }, 5000);
+	  
+	  
 		
 	  } catch (err) {
 		console.log(err);
@@ -146,76 +168,69 @@ function App() {
   };    
   
   const claimNFTs = () => {
-    let cost = CONFIG.WEI_COST;
     let gasLimit = CONFIG.GAS_LIMIT;
-    let totalCostWei = String(cost * mintAmount);
+    let totalCostWei = 0;
     let totalGasLimit = String(gasLimit * mintAmount);
-    console.log("Cost: ", totalCostWei);
-    console.log("Gas limit: ", totalGasLimit);
-    setFeedback(`Minting your ${CONFIG.NFT_NAME}...`);
+
 	setClaimingNft(true);
-	console.log('Network ID is',CONFIG.NETWORK.ID)
 	if (chainId == CONFIG.NETWORK.ID) {	  
-
-		const web3 = new Web3(library.provider);
 		
-		try {
-		    const SmartContract = new web3.eth.Contract(
-			abi,
-			  CONFIG.CONTRACT_ADDRESS
-		    );
-		    SmartContract.setProvider(library.provider);
+		const web3 = new Web3(library.provider);
+		const SmartContract = new web3.eth.Contract(
+		abi,
+		  CONFIG.CONTRACT_ADDRESS
+		);
+		SmartContract.setProvider(library.provider);		
+	    try {
 			SmartContract.methods
-			  .mintQueenChiku(1)
-			  .send({
-				gasLimit: String(totalGasLimit),
-				to: CONFIG.CONTRACT_ADDRESS,
-				from: account,
-				value: totalCostWei,
-			  })
-			  .once("error", (err) => {
-				console.log(err);
-				setFeedback("Sorry, something went wrong please try again later.");
-				setClaimingNft(false);
-			  })
-			  .then((receipt) => {
-				console.log(receipt);
-				setFeedback(
-				  `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
-				);
-				setClaimingNft(false);
-			  });
-		  } catch (err) {
-			console.log(err);
-		  }
-
+				.calculatePrice()
+				.call()
+				.then((result) => {
+				setTotalPrice(result);
+				
+			});		  
+			try {
+				totalCostWei = String(totalPrice * mintAmount);
+				if(totalCostWei) {
+					SmartContract.methods
+					  .mintQueenChiku(1)
+					  .send({
+						gasLimit: String(totalGasLimit),
+						to: CONFIG.CONTRACT_ADDRESS,
+						from: account,
+						value: totalCostWei,
+					  })
+					  .once("error", (err) => {
+						console.log(err);
+						setFeedback("Sorry, something went wrong please try again later.");
+						setClaimingNft(false);
+					  })
+					  .then((receipt) => {
+						console.log(receipt);
+						setFeedback(
+						  `WOW, the ${CONFIG.NFT_NAME} is yours! go visit tofunft.com to view it.`
+						);
+						setClaimingNft(false);
+					  });
+				} else {
+					setFeedback(`Failed to calculate price. Try again later.`);
+					setClaimingNft(false);
+				}
+			  } catch (err) {
+				setFeedback(`Could not load data from Contract. Try again later.`);
+			  } 
+		} catch(err) {
+			setFeedback(`Failed to calculate price. Try again later.`);
+		}			
+		
 	} else {
 		setClaimingNft(false);
 		setFeedback(`Please switch your Network to ${CONFIG.NETWORK.NAME} `);
 	};
   };  
-
-
-
-
-  useEffect(() => {
-    const provider = window.localStorage.getItem("provider");
-    if (provider) activate(connectors[provider]);
-  }, []);
   
-  useEffect(() => {
-	  if (library !== undefined) {
-		library.provider.on('chainChanged', () => {
-		  initialize();
-		})
-		window.ethereum.on('accountsChanged', () => {
-		  initialize();
-		})
-	  }
-  }, []);  
-  
-  const checkFeedBack = () => {
-      if(chainId) {
+  const getFeedback = () => {
+    if(chainId) {
 	  if(chainId == CONFIG.NETWORK.ID) {
 		setFeedback(`Click to claim your NFT.`);
 	  } else {
@@ -223,14 +238,25 @@ function App() {
 	  }
     } else {
 	  setFeedback(`You are not Connected.`);
-    }	  
+    }  
   };  
+
+  useEffect(() => {
+    const provider = window.localStorage.getItem("provider");
+    if (provider) activate(connectors[provider]);
+  }, []);
+  useEffect(() => {
+    getFeedback();
+  }, [library]);
+
+  useEffect(() => {
+	initialize();
+  }, []);    
   
   return (
-    <>
-	
+    <>	
 	<ChakraProvider theme={fonts}>
-		<VStack minHeight="100vh" background="#1e1d32">
+		<VStack minHeight="100vh" background="url(/bg.png) center center no-repeat #1e1d32" backgroundSize="cover">
 		  <Container maxW="1000px" >
 			<HStack justifyContent="space-between" height="80px">
 				<Box>
@@ -268,7 +294,7 @@ function App() {
 			</HStack>
 		  </Container>
 		  <Container maxW="1000px" paddingTop={["50px","25px", "0"]}>
-			<VStack background="#292845" borderRadius="15px" padding={["0 30px 30px 30px", "0 60px 60px 60px", "0 90px 90px 90px"]} justifyContent="center" alignItems="center" marginBottom="2rem" color="white">
+			<VStack background="#25243aa8" borderRadius="15px" padding={["0 30px 30px 30px", "0 60px 60px 60px", "0 90px 90px 90px"]} justifyContent="center" alignItems="center" marginBottom="2rem" color="white">
 					<Image position="relative" marginTop="-50px" src='/logo.png' />
 					<HStack marginBottom="10px">
 					  <Text
@@ -408,7 +434,7 @@ function App() {
 								  color="white"
 								  height={["60px", "80px"]}
 								  letterSpacing = "1px"
-								  fontSize={["1em", "1.15em", "1.25em", "1.5em"]}
+								  fontSize={["1.25em", "1.5em"]}
 								  borderRadius="60px"
 								  paddingLeft={["30px", "40px"]}
 								  paddingRight={["30px", "40px"]}
